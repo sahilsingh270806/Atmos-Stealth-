@@ -26,7 +26,7 @@ import { fetchSearchGroundedWeather, GroundedWeatherResponse } from './services/
 export default function App() {
   const [currentStation, setCurrentStation] = useState<StationInfo>(STATIONS[0]);
   const [activeHorizon, setActiveHorizon] = useState<TimeHorizon>('7D');
-  const [activeTab, setActiveTab] = useState<ActiveTab>('analytics');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('forecast');
 
   // Grounding state
   const [groundedData, setGroundedData] = useState<GroundedWeatherResponse | null>(null);
@@ -37,10 +37,64 @@ export default function App() {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // Filter units
-  const [tempUnit, setTempUnit] = useState<'C' | 'F'>('C');
-  const [pressureUnit, setPressureUnit] = useState<'hPa' | 'inHg'>('hPa');
-  const [windUnit, setWindUnit] = useState<'km/h' | 'kt'>('km/h');
+  // Filter units persisted in localStorage across browser sessions
+  const [tempUnit, setTempUnit] = useState<'C' | 'F'>(() => {
+    try {
+      const saved = localStorage.getItem('tempUnit') || localStorage.getItem('atmos_temp_unit');
+      if (saved === 'C' || saved === 'F') return saved;
+    } catch {
+      // Graceful fallback for restricted environments
+    }
+    return 'C';
+  });
+
+  const [pressureUnit, setPressureUnit] = useState<'hPa' | 'inHg'>(() => {
+    try {
+      const saved = localStorage.getItem('pressureUnit') || localStorage.getItem('atmos_pressure_unit');
+      if (saved === 'hPa' || saved === 'inHg') return saved;
+    } catch {
+      // Graceful fallback for restricted environments
+    }
+    return 'hPa';
+  });
+
+  const [windUnit, setWindUnit] = useState<'km/h' | 'kt'>(() => {
+    try {
+      const saved = localStorage.getItem('windUnit') || localStorage.getItem('atmos_wind_unit');
+      if (saved === 'km/h' || saved === 'kt') return saved;
+    } catch {
+      // Graceful fallback for restricted environments
+    }
+    return 'km/h';
+  });
+
+  // Automatically write user preferences to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('tempUnit', tempUnit);
+      localStorage.setItem('atmos_temp_unit', tempUnit);
+    } catch {
+      // ignore
+    }
+  }, [tempUnit]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pressureUnit', pressureUnit);
+      localStorage.setItem('atmos_pressure_unit', pressureUnit);
+    } catch {
+      // ignore
+    }
+  }, [pressureUnit]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('windUnit', windUnit);
+      localStorage.setItem('atmos_wind_unit', windUnit);
+    } catch {
+      // ignore
+    }
+  }, [windUnit]);
 
   // Load grounded data for station
   const loadGroundedData = useCallback(async (customLocation?: string) => {
@@ -81,6 +135,9 @@ export default function App() {
           groundedData={groundedData}
           isLoading={isGroundingLoading}
           onRefresh={(custom) => loadGroundedData(custom)}
+          tempUnit={tempUnit}
+          pressureUnit={pressureUnit}
+          windUnit={windUnit}
         />
 
         {/* Analytics Tab (Exact Screen from User's Screenshot & HTML) */}
@@ -125,7 +182,7 @@ export default function App() {
 
         {/* Forecast Tab */}
         {activeTab === 'forecast' && (
-          <ForecastView station={currentStation} />
+          <ForecastView station={currentStation} temperatureUnit={tempUnit} />
         )}
 
         {/* Radar Tab */}

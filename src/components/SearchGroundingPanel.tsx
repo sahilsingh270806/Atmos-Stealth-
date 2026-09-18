@@ -6,6 +6,9 @@ interface SearchGroundingPanelProps {
   isLoading: boolean;
   onRefresh: (customLocation?: string) => void;
   onApplyToDashboard?: (data: GroundedWeatherResponse) => void;
+  tempUnit?: 'C' | 'F';
+  pressureUnit?: 'hPa' | 'inHg';
+  windUnit?: 'km/h' | 'kt';
 }
 
 export const SearchGroundingPanel: React.FC<SearchGroundingPanelProps> = ({
@@ -13,9 +16,34 @@ export const SearchGroundingPanel: React.FC<SearchGroundingPanelProps> = ({
   isLoading,
   onRefresh,
   onApplyToDashboard,
+  tempUnit = 'C',
+  pressureUnit = 'hPa',
+  windUnit = 'km/h',
 }) => {
   const [customQuery, setCustomQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const formatTemp = (celsius: number) => {
+    if (tempUnit === 'F') {
+      return ((celsius * 9) / 5 + 32).toFixed(1) + '°F';
+    }
+    return celsius.toFixed(1) + '°C';
+  };
+
+  const formatPressure = (hpa: number) => {
+    if (pressureUnit === 'inHg') {
+      return (hpa * 0.02953).toFixed(2) + ' inHg';
+    }
+    return hpa.toFixed(1) + ' hPa';
+  };
+
+  const formatWind = (kmh: number) => {
+    if (windUnit === 'kt') {
+      return (kmh * 0.539957).toFixed(1) + ' kt';
+    }
+    return kmh.toFixed(1) + ' km/h';
+  };
+
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,19 +112,19 @@ export const SearchGroundingPanel: React.FC<SearchGroundingPanelProps> = ({
           <div className="grid grid-cols-4 gap-1 p-1 bg-[#1f2022] border border-[#2b3038]/40 text-center font-code-telemetry text-[11px]">
             <div>
               <span className="block text-[8px] text-[#8e9193] font-geist uppercase">TEMP</span>
-              <span className="text-white font-bold">{groundedData.temp}°C</span>
+              <span className="text-white font-bold">{formatTemp(groundedData.temp)}</span>
             </div>
             <div>
               <span className="block text-[8px] text-[#8e9193] font-geist uppercase">DEW</span>
-              <span className="text-[#c4c7c9]">{groundedData.dewPoint}°C</span>
+              <span className="text-[#c4c7c9]">{formatTemp(groundedData.dewPoint)}</span>
             </div>
             <div>
               <span className="block text-[8px] text-[#8e9193] font-geist uppercase">PRESSURE</span>
-              <span className="text-white font-semibold">{groundedData.pressure} hPa</span>
+              <span className="text-white font-semibold">{formatPressure(groundedData.pressure)}</span>
             </div>
             <div>
               <span className="block text-[8px] text-[#8e9193] font-geist uppercase">WIND</span>
-              <span className="text-white font-semibold">{groundedData.windSpeed} km/h</span>
+              <span className="text-white font-semibold">{formatWind(groundedData.windSpeed)}</span>
             </div>
           </div>
         )}

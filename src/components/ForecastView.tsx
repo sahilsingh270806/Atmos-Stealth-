@@ -4,10 +4,28 @@ import { HOURLY_FORECAST_DATA, DAILY_FORECAST_DATA } from '../data/mockData';
 
 interface ForecastViewProps {
   station: StationInfo;
+  temperatureUnit?: 'C' | 'F';
 }
 
-export const ForecastView: React.FC<ForecastViewProps> = ({ station }) => {
+export const ForecastView: React.FC<ForecastViewProps> = ({
+  station,
+  temperatureUnit = 'C',
+}) => {
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
+
+  const formatTemp = (celsius: number) => {
+    if (temperatureUnit === 'F') {
+      return Math.round((celsius * 9) / 5 + 32) + '°F';
+    }
+    return Math.round(celsius) + '°C';
+  };
+
+  const formatVal = (celsius: number) => {
+    if (temperatureUnit === 'F') {
+      return Math.round((celsius * 9) / 5 + 32);
+    }
+    return Math.round(celsius);
+  };
 
   return (
     <div className="flex flex-col w-full pb-6">
@@ -149,10 +167,10 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ station }) => {
                   {hr.icon}
                 </span>
                 <span className="font-code-telemetry text-[14px] text-white font-semibold">
-                  {hr.temp}°C
+                  {formatTemp(hr.temp)}
                 </span>
                 <span className="font-geist text-[9px] text-[#8e9193] mt-0.5">
-                  DEW {hr.dewPoint}°
+                  DEW {formatVal(hr.dewPoint)}°
                 </span>
 
                 {/* PoP bar */}
@@ -227,7 +245,7 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ station }) => {
 
               {/* Temp Range Bar */}
               <div className="flex items-center gap-1.5 font-code-telemetry text-[11px] w-24 justify-end">
-                <span className="text-[#8e9193]">{d.low}°</span>
+                <span className="text-[#8e9193]">{formatVal(d.low)}°</span>
                 <div className="w-10 h-1 bg-[#292a2c] relative">
                   <div
                     className="absolute top-0 bottom-0 bg-white"
@@ -237,7 +255,7 @@ export const ForecastView: React.FC<ForecastViewProps> = ({ station }) => {
                     }}
                   />
                 </div>
-                <span className="text-white font-semibold">{d.high}°</span>
+                <span className="text-white font-semibold">{formatVal(d.high)}°</span>
               </div>
             </div>
           ))}
