@@ -1,12 +1,17 @@
 import React from 'react';
+import { StationInfo } from '../types';
 
 interface SensorHealthGridProps {
+  station?: StationInfo;
   onDownloadTelemetry: () => void;
 }
 
 export const SensorHealthGrid: React.FC<SensorHealthGridProps> = ({
+  station,
   onDownloadTelemetry,
 }) => {
+  const stationName = station?.name ? station.name.toUpperCase() : 'ACTIVE STATION';
+
   return (
     <section className="flex flex-col mx-4 mt-2 mb-4 bg-[#1b1c1e] border border-[#2b3038]/60 shadow-sm">
       {/* Header */}
@@ -14,12 +19,19 @@ export const SensorHealthGrid: React.FC<SensorHealthGridProps> = ({
         <div className="flex items-center gap-1.5">
           <span className="material-symbols-outlined text-white text-[16px]">dns</span>
           <span className="font-geist text-[12px] uppercase font-semibold text-[#e3e2e5] tracking-wider">
-            STATION SENSOR HEALTH // TELEMETRY
+            SENSOR TELEMETRY // {stationName}
           </span>
         </div>
-        <span className="font-code-telemetry text-[11px] text-white font-semibold">
-          ONLINE
-        </span>
+        <div className="flex items-center gap-2">
+          {station?.coordinates && (
+            <span className="font-code-telemetry text-[10px] text-[#8e9193]">
+              {station.coordinates}
+            </span>
+          )}
+          <span className="font-code-telemetry text-[11px] text-white font-semibold">
+            ONLINE
+          </span>
+        </div>
       </div>
 
       {/* 2x2 Micro-Grid */}
@@ -59,7 +71,7 @@ export const SensorHealthGrid: React.FC<SensorHealthGridProps> = ({
             7.4 UVI
           </span>
           <span className="font-geist text-[9px] text-[#8e9193] mt-0.5 tracking-wide">
-            ALL-TIME HIGH 8.1 UVI
+            MAX SOLAR FLUX MONITOR
           </span>
         </div>
 
@@ -71,8 +83,8 @@ export const SensorHealthGrid: React.FC<SensorHealthGridProps> = ({
           <span className="font-code-telemetry text-[13px] text-[#e3e2e5] font-semibold mt-0.5 leading-tight">
             38 PM2.5
           </span>
-          <span className="font-geist text-[9px] text-[#8e9193] mt-0.5 tracking-wide">
-            AQI 54 // CLEAN MARITIME
+          <span className="font-geist text-[9px] text-[#8e9193] mt-0.5 tracking-wide uppercase">
+            {station?.cluster || 'REGIONAL ATMOSPHERIC SECTOR'}
           </span>
         </div>
       </div>
@@ -84,7 +96,7 @@ export const SensorHealthGrid: React.FC<SensorHealthGridProps> = ({
           className="w-full py-2.5 bg-white text-[#090a0c] font-geist text-[11px] uppercase tracking-widest font-semibold flex items-center justify-center gap-1.5 hover:bg-[#e0e3e5] active:scale-[0.99] transition-all cursor-pointer shadow-sm border border-transparent"
         >
           <span className="material-symbols-outlined text-[16px]">file_download</span>
-          <span>DOWNLOAD RAW CSV TELEMETRY (.GRIB2 / JSON)</span>
+          <span>DOWNLOAD RAW CSV TELEMETRY FOR {stationName}</span>
         </button>
       </div>
     </section>

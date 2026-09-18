@@ -11,6 +11,13 @@ export interface StationInfo {
   status: 'ONLINE' | 'STANDBY' | 'DEGRADED';
   ttl: string;
   latency: string;
+  temperatureC?: number;
+  dewPointC?: number;
+  pressureHpa?: number;
+  pressureTendency?: string;
+  windSpeedKmh?: number;
+  windDirection?: string;
+  precipitationRate?: string;
 }
 
 export interface DayThermalPoint {

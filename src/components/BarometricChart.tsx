@@ -2,6 +2,9 @@ import React, { useState, useRef } from 'react';
 
 interface BarometricChartProps {
   pressureUnit?: 'hPa' | 'inHg';
+  currentPressure?: number;
+  pressureTendency?: string;
+  stationName?: string;
 }
 
 interface BaroSample {
@@ -16,6 +19,9 @@ interface BaroSample {
 
 export const BarometricChart: React.FC<BarometricChartProps> = ({
   pressureUnit = 'hPa',
+  currentPressure = 1005.8,
+  pressureTendency,
+  stationName,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeSample, setActiveSample] = useState<BaroSample | null>(null);
@@ -27,18 +33,38 @@ export const BarometricChart: React.FC<BarometricChartProps> = ({
     return hpa.toFixed(1) + ' hPa';
   };
 
-  // Trajectory timeline samples (SVG viewBox 0 0 340 80)
-  const baroPoints: BaroSample[] = [
-    { x: 0, y: 22, hpa: 1011.6, time: '15 OCT 00:00 UTC', tendency: 'STEADY HIGH PRESSURE' },
-    { x: 50, y: 24, hpa: 1011.2, time: '15 OCT 18:00 UTC', tendency: 'SLIGHT DIURNAL DIP' },
-    { x: 95, y: 28, hpa: 1010.4, time: '16 OCT 12:00 UTC', tendency: 'GRADUAL TENDENCY DROP' },
-    { x: 140, y: 36, hpa: 1009.0, time: '17 OCT 06:00 UTC', tendency: 'PRE-FRONTAL DEPRESSION' },
-    { x: 180, y: 48, hpa: 1007.2, time: '18 OCT 00:00 UTC', tendency: 'RAPID FALLING GRADIENT' },
-    { x: 220, y: 68, hpa: 1004.2, time: '19 OCT 08:00 UTC', tendency: 'DEEP CYCLONIC TROUGH', isMin: true },
-    { x: 260, y: 65, hpa: 1004.8, time: '19 OCT 20:00 UTC', tendency: 'SLOW RECOVERY PASSAGE' },
-    { x: 300, y: 56, hpa: 1006.4, time: '20 OCT 14:00 UTC', tendency: 'RIDGE STABILIZATION' },
-    { x: 340, y: 58, hpa: 1005.8, time: '21 OCT 12:00 UTC', tendency: 'CURRENT MARITIME FLUX', isCurrent: true },
+  const p = typeof currentPressure === 'number' && !isNaN(currentPressure) ? currentPressure : 1005.8;
+
+  // Trajectory timeline dynamically centered on current station pressure
+  const offsets = [
+    { x: 0, delta: +4.2, time: '-48H 00:00 UTC', tendency: 'ANTECEDENT REGIONAL HIGH' },
+    { x: 45, delta: +3.6, time: '-42H 06:00 UTC', tendency: 'GRADUAL BARIC FLUX' },
+    { x: 90, delta: +2.2, time: '-36H 12:00 UTC', tendency: 'MODERATE SUBSIDENCE' },
+    { x: 135, delta: +1.0, time: '-24H 00:00 UTC', tendency: 'STABLE TROPOSPHERIC CORE' },
+    { x: 180, delta: -0.6, time: '-18H 06:00 UTC', tendency: 'PRE-FRONTAL DEPRESSION' },
+    { x: 225, delta: -2.4, time: '-12H 12:00 UTC', tendency: 'CYCLONIC TROUGH INFLECTION', isMin: true },
+    { x: 270, delta: -1.2, time: '-06H 18:00 UTC', tendency: 'SLOW RECOVERY PASSAGE' },
+    { x: 310, delta: -0.4, time: '-03H 21:00 UTC', tendency: 'STABILIZING GRADIENT' },
+    { x: 340, delta: 0, time: 'CURRENT 00:00 UTC', tendency: pressureTendency || 'LIVE OBSERVED SURFACE PRESSURE', isCurrent: true },
   ];
+
+  const baroPoints: BaroSample[] = offsets.map((pt) => {
+    const hpa = parseFloat((p + pt.delta).toFixed(1));
+    // map between y=16 (high) and y=68 (low)
+    const y = Math.max(14, Math.min(70, Math.round(48 - pt.delta * 7)));
+    return {
+      x: pt.x,
+      y,
+      hpa,
+      time: pt.time,
+      tendency: pt.tendency,
+      isMin: pt.isMin,
+      isCurrent: pt.isCurrent,
+    };
+  });
+
+  const pathD = baroPoints.map((s, i) => `${i === 0 ? 'M' : 'L'} ${s.x},${s.y}`).join(' ');
+  const minPoint = baroPoints.find((b) => b.isMin) || baroPoints[5];
 
   const handlePointerInteraction = (clientX: number) => {
     if (!containerRef.current) return;
@@ -81,7 +107,7 @@ export const BarometricChart: React.FC<BarometricChartProps> = ({
             </span>
           )}
           <span className="font-code-telemetry text-[11px] text-white font-semibold">
-            {formatPressure(1005.8)}
+            {formatPressure(p)}
           </span>
         </div>
       </div>
@@ -92,11 +118,11 @@ export const BarometricChart: React.FC<BarometricChartProps> = ({
           <div className="flex items-center gap-1 bg-[#292a2c] px-1.5 py-0.5 border border-[#444749]/50">
             <span className="w-1.5 h-1.5 bg-white"></span>
             <span className="font-geist text-[10px] uppercase font-semibold text-white tracking-wide">
-              FALLING RAPIDLY // CONVECTIVE TROUGH
+              {p < 1005 ? 'DEEP CYCLONIC TROUGH // LOW' : p < 1013 ? 'STEADY MARITIME TENDENCY' : 'HIGH BARIC RIDGE // STABLE'}
             </span>
           </div>
           <span className="font-code-telemetry text-[10px] text-[#c4c7c9]">
-            3-HR DELTA: -2.4 hPa
+            {stationName ? `${stationName.toUpperCase()} // ` : ''}3-HR DELTA: -0.8 hPa
           </span>
         </div>
 
@@ -121,13 +147,13 @@ export const BarometricChart: React.FC<BarometricChartProps> = ({
             preserveAspectRatio="none"
             viewBox="0 0 340 80"
           >
-            {/* Isobar Baseline (1012 hPa) */}
+            {/* Isobar Baseline */}
             <line stroke="#444749" strokeDasharray="3 3" strokeWidth="0.75" x1="0" x2="340" y1="20" y2="20" />
             <text fill="#8e9193" fontFamily="Geist" fontSize="8" x="4" y="15" letterSpacing="0.04em">
-              1012 hPa BASELINE
+              1013.25 hPa STD BASELINE
             </text>
 
-            {/* Critical Pressure Line (1004 hPa) */}
+            {/* Critical Pressure Line */}
             <line opacity="0.6" stroke="#444749" strokeDasharray="2 2" strokeWidth="0.75" x1="0" x2="340" y1="62" y2="62" />
             <text fill="#8e9193" fontFamily="Geist" fontSize="8" x="4" y="57" letterSpacing="0.04em">
               1004 hPa DEEP CYCLONIC THRESHOLD
@@ -135,15 +161,15 @@ export const BarometricChart: React.FC<BarometricChartProps> = ({
 
             {/* Pressure Trajectory Curve */}
             <path
-              d="M 0,22 L 50,24 L 95,28 L 140,36 L 180,48 L 220,68 L 260,65 L 300,56 L 340,58"
+              d={pathD}
               fill="none"
               stroke="#ffffff"
               strokeWidth="1.5"
             />
 
-            {/* Static Min Point Node */}
-            <circle cx="220" cy="68" fill="#ffffff" r="3" />
-            <circle cx="220" cy="68" fill="none" stroke="#ffffff" strokeWidth="0.75" opacity="0.5" r="5" />
+            {/* Dynamic Min Point Node */}
+            <circle cx={minPoint.x} cy={minPoint.y} fill="#ffffff" r="3" />
+            <circle cx={minPoint.x} cy={minPoint.y} fill="none" stroke="#ffffff" strokeWidth="0.75" opacity="0.5" r="5" />
 
             {/* Interactive Precision Crosshairs */}
             {activeSample && (

@@ -3,12 +3,15 @@ import { HydrometeorDay } from '../types';
 
 interface HydrometeorChartProps {
   data: HydrometeorDay[];
+  stationName?: string;
 }
 
-export const HydrometeorChart: React.FC<HydrometeorChartProps> = ({ data }) => {
+export const HydrometeorChart: React.FC<HydrometeorChartProps> = ({ data, stationName }) => {
   const [activeDay, setActiveDay] = useState<HydrometeorDay | null>(null);
 
-  const maxVal = 55; // scaling headroom
+  const totalAccum = data.reduce((sum, d) => sum + (d.value || 0), 0);
+  const maxDataVal = Math.max(1, ...data.map((d) => d.value || 0));
+  const maxVal = Math.max(15, maxDataVal * 1.2); // scaling headroom
 
   return (
     <section className="flex flex-col mx-4 mt-2 bg-[#1b1c1e] border border-[#2b3038]/60 shadow-sm">
@@ -20,9 +23,16 @@ export const HydrometeorChart: React.FC<HydrometeorChartProps> = ({ data }) => {
             HYDROMETEOR ACCUMULATION // 7-DAY
           </span>
         </div>
-        <span className="font-code-telemetry text-[11px] text-[#e3e2e5] font-semibold">
-          TOTAL: 94.2 mm
-        </span>
+        <div className="flex items-center gap-2">
+          {stationName && (
+            <span className="font-code-telemetry text-[10px] text-[#8e9193] uppercase">
+              {stationName}
+            </span>
+          )}
+          <span className="font-code-telemetry text-[11px] text-[#e3e2e5] font-semibold">
+            TOTAL: {totalAccum.toFixed(1)} mm
+          </span>
+        </div>
       </div>
 
       <div className="p-2 flex flex-col gap-1.5">

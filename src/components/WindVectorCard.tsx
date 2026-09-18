@@ -2,10 +2,18 @@ import React, { useState } from 'react';
 
 interface WindVectorCardProps {
   windSpeedUnit?: 'km/h' | 'kt';
+  windSpeed?: number;
+  windDirection?: string;
+  peakGust?: number;
+  stationName?: string;
 }
 
 export const WindVectorCard: React.FC<WindVectorCardProps> = ({
   windSpeedUnit = 'km/h',
+  windSpeed,
+  windDirection = '180° S',
+  peakGust,
+  stationName,
 }) => {
   const [interactiveAngle, setInteractiveAngle] = useState<number | null>(null);
 
@@ -16,7 +24,16 @@ export const WindVectorCard: React.FC<WindVectorCardProps> = ({
     return kmh.toFixed(1) + ' km/h';
   };
 
-  const angle = interactiveAngle !== null ? interactiveAngle : 180;
+  // Parse angle from windDirection string (e.g. "180° S" or "22° NNE")
+  const parsedAngle = (() => {
+    if (!windDirection) return 180;
+    const match = windDirection.match(/^(\d+)/);
+    return match ? parseInt(match[1], 10) : 180;
+  })();
+
+  const angle = interactiveAngle !== null ? interactiveAngle : parsedAngle;
+  const currentSpeed = typeof windSpeed === 'number' && !isNaN(windSpeed) ? windSpeed : 14.2;
+  const currentGust = typeof peakGust === 'number' && !isNaN(peakGust) ? peakGust : parseFloat((currentSpeed * 1.6).toFixed(1));
 
   return (
     <section className="flex flex-col mx-4 mt-2 bg-[#1b1c1e] border border-[#2b3038]/60 shadow-sm">
@@ -29,7 +46,7 @@ export const WindVectorCard: React.FC<WindVectorCardProps> = ({
           </span>
         </div>
         <span className="font-code-telemetry text-[11px] text-[#c4c7c9]">
-          VECTOR {angle}° {angle === 180 ? 'S' : `${angle}°`}
+          VECTOR {angle}° {windDirection ? windDirection.split(' ')[1] || '' : ''}
         </span>
       </div>
 
@@ -106,10 +123,10 @@ export const WindVectorCard: React.FC<WindVectorCardProps> = ({
                 PREDOMINANT DRIFT
               </span>
               <span className="font-code-telemetry text-[13px] text-white font-semibold leading-tight mt-0.5">
-                {angle}° {angle === 180 ? 'S' : ''}
+                {angle}° {windDirection ? windDirection.split(' ')[1] || '' : ''}
               </span>
-              <span className="font-geist text-[9px] text-[#8e9193] tracking-wide mt-0.5">
-                BAY OF BENGAL MARITIME
+              <span className="font-geist text-[9px] text-[#8e9193] tracking-wide mt-0.5 uppercase">
+                {stationName ? `${stationName} SECTOR` : 'LOCAL OBSERVED VECTOR'}
               </span>
             </div>
 
@@ -118,10 +135,10 @@ export const WindVectorCard: React.FC<WindVectorCardProps> = ({
                 SUSTAINED MEAN
               </span>
               <span className="font-code-telemetry text-[13px] text-[#e3e2e5] font-semibold leading-tight mt-0.5">
-                {formatSpeed(14.2)}
+                {formatSpeed(currentSpeed)}
               </span>
               <span className="font-geist text-[9px] text-[#8e9193] tracking-wide mt-0.5">
-                7-DAY VECTOR RESOLUTION
+                10M ANEMOMETER PROBE
               </span>
             </div>
 
@@ -130,10 +147,10 @@ export const WindVectorCard: React.FC<WindVectorCardProps> = ({
                 PEAK RECORDED GUST
               </span>
               <span className="font-code-telemetry text-[13px] text-white font-semibold leading-tight mt-0.5">
-                {formatSpeed(42.8)}
+                {formatSpeed(currentGust)}
               </span>
               <span className="font-geist text-[9px] text-[#8e9193] tracking-wide mt-0.5">
-                19 OCT 14:22 UTC
+                SURFACE BOUNDARY LAYER
               </span>
             </div>
           </div>

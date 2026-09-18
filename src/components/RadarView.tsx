@@ -55,7 +55,7 @@ export const RadarView: React.FC<RadarViewProps> = ({ station }) => {
           <div className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-white text-[16px]">radar</span>
             <span className="font-geist text-[12px] uppercase font-semibold text-white tracking-wider">
-              DOPPLER RADAR // HALDIA COASTAL ARRAY
+              DOPPLER RADAR // {station.name.toUpperCase()} ARRAY
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -295,6 +295,17 @@ export const RadarView: React.FC<RadarViewProps> = ({ station }) => {
             {/* Center Station Transmitter Node */}
             <circle cx="150" cy="150" r="3.5" fill="#ffffff" />
             <circle cx="150" cy="150" r="7" fill="none" stroke="#ffffff" strokeWidth="0.8" />
+            <text
+              fill="#ffffff"
+              fontFamily="Geist"
+              fontSize="6.5"
+              fontWeight="600"
+              textAnchor="middle"
+              x="150"
+              y="163"
+            >
+              {station.name.toUpperCase()} (TX)
+            </text>
 
             {/* Cardinal Marks */}
             <text fill="#ffffff" fontFamily="Geist" fontSize="8" fontWeight="600" textAnchor="middle" x="150" y="22">

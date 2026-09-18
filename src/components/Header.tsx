@@ -7,6 +7,10 @@ interface HeaderProps {
   onSelectStation: (station: StationInfo) => void;
   onOpenFilter: () => void;
   onOpenProfile: () => void;
+  onLocateMe?: () => void;
+  onSearchQuery?: (query: string) => void;
+  isGpsActive?: boolean;
+  isLocating?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -14,6 +18,9 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectStation,
   onOpenFilter,
   onOpenProfile,
+  onLocateMe,
+  isGpsActive = false,
+  isLocating = false,
 }) => {
   const [stationDropdownOpen, setStationDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -58,42 +65,75 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Station Selector Dropdown */}
           {stationDropdownOpen && (
-            <div className="absolute top-12 left-0 w-72 bg-[#1b1c1e] border border-[#444749] shadow-2xl z-50 py-1 divide-y divide-[#292a2c]">
-              <div className="px-3 py-1.5 bg-[#0d0e10]">
-                <span className="font-geist text-[9px] uppercase tracking-widest text-[#8e9193]">
-                  SELECT TELEMETRY CLUSTER
-                </span>
-              </div>
-              {STATIONS.map((station) => (
+            <div className="absolute top-12 left-0 w-80 bg-[#1b1c1e] border border-[#444749] shadow-2xl z-50 py-1 divide-y divide-[#292a2c]">
+              {/* GPS Auto Detect Option */}
+              <div className="p-2 bg-[#0d0e10]">
                 <button
-                  key={station.id}
+                  type="button"
                   onClick={() => {
-                    onSelectStation(station);
+                    if (onLocateMe) onLocateMe();
                     setStationDropdownOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-2 flex flex-col transition-colors cursor-pointer ${
-                    station.id === currentStation.id
-                      ? 'bg-[#292a2c] text-white border-l-2 border-white'
-                      : 'text-[#c4c7c9] hover:bg-[#202225] hover:text-white'
+                  disabled={isLocating}
+                  className={`w-full py-1.5 px-2 flex items-center justify-between border text-[11px] font-geist font-semibold cursor-pointer transition ${
+                    isGpsActive
+                      ? 'bg-white text-black border-white'
+                      : 'bg-[#1f2022] text-white border-[#444749] hover:bg-[#282a2d]'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-geist text-[12px] uppercase font-semibold">
-                      {station.name}
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[15px]">
+                      {isLocating ? 'sync' : 'my_location'}
                     </span>
-                    <span className="font-geist text-[10px] text-[#8e9193]">
-                      {station.status}
+                    <span>
+                      {isLocating
+                        ? 'ACQUIRING GPS FIX...'
+                        : isGpsActive
+                        ? 'CURRENT GPS LOCATION (ACTIVE)'
+                        : 'USE CURRENT GPS LOCATION'}
                     </span>
                   </div>
-                  <span className="font-geist text-[9px] text-[#8e9193] mt-0.5 tracking-wider">
-                    {station.cluster}
-                  </span>
-                  <div className="flex items-center justify-between mt-1 text-[9px] text-[#8e9193] font-code-telemetry">
-                    <span>{station.coordinates}</span>
-                    <span>{station.latency}</span>
-                  </div>
+                  <span className="text-[9px] font-code-telemetry opacity-70">AUTO</span>
                 </button>
-              ))}
+              </div>
+
+              <div className="px-3 py-1.5 bg-[#0d0e10]">
+                <span className="font-geist text-[9px] uppercase tracking-widest text-[#8e9193]">
+                  PRESET TELEMETRY CLUSTERS
+                </span>
+              </div>
+              <div className="max-h-56 overflow-y-auto">
+                {STATIONS.map((station) => (
+                  <button
+                    key={station.id}
+                    onClick={() => {
+                      onSelectStation(station);
+                      setStationDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 flex flex-col transition-colors cursor-pointer ${
+                      station.id === currentStation.id && !isGpsActive
+                        ? 'bg-[#292a2c] text-white border-l-2 border-white'
+                        : 'text-[#c4c7c9] hover:bg-[#202225] hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-geist text-[12px] uppercase font-semibold">
+                        {station.name}
+                      </span>
+                      <span className="font-geist text-[10px] text-[#8e9193]">
+                        {station.status}
+                      </span>
+                    </div>
+                    <span className="font-geist text-[9px] text-[#8e9193] mt-0.5 tracking-wider">
+                      {station.cluster}
+                    </span>
+                    <div className="flex items-center justify-between mt-1 text-[9px] text-[#8e9193] font-code-telemetry">
+                      <span>{station.coordinates}</span>
+                      <span>{station.latency}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

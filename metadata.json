@@ -1,7 +1,9 @@
 {
   "name": "Atmos Stealth Instrumentation",
   "description": "Tactical meteorological telemetry console and micro-climate observation station with high-density sensor analysis, radar scans, and atmospheric gradient tracking.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": [
+    "geolocation"
+  ],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
