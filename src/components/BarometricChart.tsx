@@ -1,17 +1,67 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 
 interface BarometricChartProps {
   pressureUnit?: 'hPa' | 'inHg';
 }
 
+interface BaroSample {
+  x: number;
+  y: number;
+  hpa: number;
+  time: string;
+  tendency: string;
+  isMin?: boolean;
+  isCurrent?: boolean;
+}
+
 export const BarometricChart: React.FC<BarometricChartProps> = ({
   pressureUnit = 'hPa',
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [activeSample, setActiveSample] = useState<BaroSample | null>(null);
+
   const formatPressure = (hpa: number) => {
     if (pressureUnit === 'inHg') {
       return (hpa * 0.02953).toFixed(2) + ' inHg';
     }
     return hpa.toFixed(1) + ' hPa';
+  };
+
+  // Trajectory timeline samples (SVG viewBox 0 0 340 80)
+  const baroPoints: BaroSample[] = [
+    { x: 0, y: 22, hpa: 1011.6, time: '15 OCT 00:00 UTC', tendency: 'STEADY HIGH PRESSURE' },
+    { x: 50, y: 24, hpa: 1011.2, time: '15 OCT 18:00 UTC', tendency: 'SLIGHT DIURNAL DIP' },
+    { x: 95, y: 28, hpa: 1010.4, time: '16 OCT 12:00 UTC', tendency: 'GRADUAL TENDENCY DROP' },
+    { x: 140, y: 36, hpa: 1009.0, time: '17 OCT 06:00 UTC', tendency: 'PRE-FRONTAL DEPRESSION' },
+    { x: 180, y: 48, hpa: 1007.2, time: '18 OCT 00:00 UTC', tendency: 'RAPID FALLING GRADIENT' },
+    { x: 220, y: 68, hpa: 1004.2, time: '19 OCT 08:00 UTC', tendency: 'DEEP CYCLONIC TROUGH', isMin: true },
+    { x: 260, y: 65, hpa: 1004.8, time: '19 OCT 20:00 UTC', tendency: 'SLOW RECOVERY PASSAGE' },
+    { x: 300, y: 56, hpa: 1006.4, time: '20 OCT 14:00 UTC', tendency: 'RIDGE STABILIZATION' },
+    { x: 340, y: 58, hpa: 1005.8, time: '21 OCT 12:00 UTC', tendency: 'CURRENT MARITIME FLUX', isCurrent: true },
+  ];
+
+  const handlePointerInteraction = (clientX: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const clampedX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const svgX = (clampedX / rect.width) * 340;
+
+    let closest = baroPoints[0];
+    let minDiff = Math.abs(svgX - baroPoints[0].x);
+
+    for (let i = 1; i < baroPoints.length; i++) {
+      const diff = Math.abs(svgX - baroPoints[i].x);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closest = baroPoints[i];
+      }
+    }
+
+    setActiveSample(closest);
+  };
+
+  const handlePointerLeave = () => {
+    setActiveSample(null);
   };
 
   return (
@@ -24,9 +74,16 @@ export const BarometricChart: React.FC<BarometricChartProps> = ({
             BAROMETRIC TENDENCY // GRADIENT
           </span>
         </div>
-        <span className="font-code-telemetry text-[11px] text-white font-semibold">
-          {formatPressure(1005.8)}
-        </span>
+        <div className="flex items-center gap-2">
+          {activeSample && (
+            <span className="font-code-telemetry text-[10px] text-white bg-[#292a2c] px-1.5 py-0.5 border border-white/40">
+              CROSSHAIR: {formatPressure(activeSample.hpa)}
+            </span>
+          )}
+          <span className="font-code-telemetry text-[11px] text-white font-semibold">
+            {formatPressure(1005.8)}
+          </span>
+        </div>
       </div>
 
       <div className="p-2 flex flex-col gap-1.5">
@@ -43,9 +100,27 @@ export const BarometricChart: React.FC<BarometricChartProps> = ({
           </span>
         </div>
 
-        {/* SVG Barometric Curve */}
-        <div className="w-full h-24 bg-[#0d0e10] p-1 relative border border-[#2b3038]/40">
-          <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 340 80">
+        {/* SVG Barometric Curve with Precision Crosshair Tooltip */}
+        <div
+          ref={containerRef}
+          className="w-full h-32 bg-[#0d0e10] p-1 relative border border-[#2b3038]/40 select-none touch-none"
+          onMouseMove={(e) => handlePointerInteraction(e.clientX)}
+          onMouseLeave={handlePointerLeave}
+          onTouchStart={(e) => {
+            const touch = e.touches[0];
+            handlePointerInteraction(touch.clientX);
+          }}
+          onTouchMove={(e) => {
+            const touch = e.touches[0];
+            handlePointerInteraction(touch.clientX);
+          }}
+          onTouchEnd={handlePointerLeave}
+        >
+          <svg
+            className="w-full h-full cursor-crosshair"
+            preserveAspectRatio="none"
+            viewBox="0 0 340 80"
+          >
             {/* Isobar Baseline (1012 hPa) */}
             <line stroke="#444749" strokeDasharray="3 3" strokeWidth="0.75" x1="0" x2="340" y1="20" y2="20" />
             <text fill="#8e9193" fontFamily="Geist" fontSize="8" x="4" y="15" letterSpacing="0.04em">
@@ -58,7 +133,7 @@ export const BarometricChart: React.FC<BarometricChartProps> = ({
               1004 hPa DEEP CYCLONIC THRESHOLD
             </text>
 
-            {/* Pressure Trajectory */}
+            {/* Pressure Trajectory Curve */}
             <path
               d="M 0,22 L 50,24 L 95,28 L 140,36 L 180,48 L 220,68 L 260,65 L 300,56 L 340,58"
               fill="none"
@@ -66,17 +141,101 @@ export const BarometricChart: React.FC<BarometricChartProps> = ({
               strokeWidth="1.5"
             />
 
-            {/* Low Point Node */}
+            {/* Static Min Point Node */}
             <circle cx="220" cy="68" fill="#ffffff" r="3" />
             <circle cx="220" cy="68" fill="none" stroke="#ffffff" strokeWidth="0.75" opacity="0.5" r="5" />
+
+            {/* Interactive Precision Crosshairs */}
+            {activeSample && (
+              <g>
+                {/* Vertical Crosshair Line */}
+                <line
+                  x1={activeSample.x}
+                  x2={activeSample.x}
+                  y1="0"
+                  y2="80"
+                  stroke="#ffffff"
+                  strokeWidth="1"
+                  strokeDasharray="2 2"
+                  opacity="0.9"
+                />
+
+                {/* Horizontal Crosshair Line */}
+                <line
+                  x1="0"
+                  x2="340"
+                  y1={activeSample.y}
+                  y2={activeSample.y}
+                  stroke="#ffffff"
+                  strokeWidth="0.75"
+                  strokeDasharray="2 3"
+                  opacity="0.7"
+                />
+
+                {/* Focus Target Ring */}
+                <circle cx={activeSample.x} cy={activeSample.y} r="4.5" fill="#ffffff" />
+                <circle
+                  cx={activeSample.x}
+                  cy={activeSample.y}
+                  r="9"
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth="1"
+                  opacity="0.6"
+                />
+              </g>
+            )}
           </svg>
 
-          {/* Min Pressure Badge */}
-          <div className="absolute bottom-1.5 right-1.5 bg-[#1f2022] border border-[#444749] px-1.5 py-0.5">
+          {/* Min Pressure Badge (static anchor) */}
+          <div className="absolute bottom-1.5 right-1.5 bg-[#1f2022] border border-[#444749] px-1.5 py-0.5 pointer-events-none">
             <span className="font-code-telemetry text-[10px] text-white font-medium">
               MIN: {formatPressure(1004.2)} (19 OCT)
             </span>
           </div>
+
+          {/* Floating Precision Tooltip */}
+          {activeSample && (
+            <div
+              className="absolute pointer-events-none z-30 transition-transform duration-75 ease-out"
+              style={{
+                left: `${Math.max(8, Math.min(84, (activeSample.x / 340) * 100))}%`,
+                top: activeSample.y > 45 ? '6px' : '38px',
+                transform: activeSample.x > 210 ? 'translateX(-95%)' : 'translateX(-5%)',
+              }}
+            >
+              <div className="bg-[#18191c]/95 backdrop-blur-md border border-white/80 p-2 shadow-2xl flex flex-col gap-1 min-w-[155px]">
+                <div className="flex items-center justify-between border-b border-[#2b3038] pb-1">
+                  <span className="font-geist text-[10px] uppercase font-bold text-white tracking-wider">
+                    {activeSample.time}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="font-geist text-[10px] text-[#8e9193] uppercase">PRESSURE</span>
+                  <span className="font-code-telemetry text-[13px] text-white font-bold">
+                    {formatPressure(activeSample.hpa)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="font-geist text-[9px] text-[#8e9193] uppercase">BASELINE DELTA</span>
+                  <span className="font-code-telemetry text-[10px] text-white font-semibold">
+                    {(activeSample.hpa - 1012.0).toFixed(1)} hPa
+                  </span>
+                </div>
+
+                <div className="mt-0.5 pt-1 border-t border-[#2b3038]/50">
+                  <span className="block font-geist text-[8px] uppercase tracking-wider text-[#8e9193]">
+                    ISOBARIC CLASSIFICATION:
+                  </span>
+                  <span className="font-code-telemetry text-[9px] text-white font-semibold block truncate">
+                    {activeSample.tendency}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Baro Detail Footnote */}

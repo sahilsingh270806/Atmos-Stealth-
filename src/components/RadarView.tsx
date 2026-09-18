@@ -9,36 +9,43 @@ export const RadarView: React.FC<RadarViewProps> = ({ station }) => {
   const [rangeNM, setRangeNM] = useState<number>(50);
   const [product, setProduct] = useState<'REFLECTIVITY' | 'VELOCITY' | 'ECHO_TOPS'>('REFLECTIVITY');
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
+  const [loopSpeed, setLoopSpeed] = useState<1 | 2 | 4>(1);
   const [frameIndex, setFrameIndex] = useState<number>(5); // 0 to 5 (5 is LIVE)
-  const [sweepAngle, setSweepAngle] = useState<number>(0);
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
 
   const frames = ['-60m', '-45m', '-30m', '-15m', '-5m', 'LIVE'];
 
-  // Radar sweep animation
-  useEffect(() => {
-    let animId: number;
-    let lastTime = performance.now();
+  // Frame trajectory coordinates for simulated cell drift (335° NNW @ 22 KT)
+  const cellPositions = [
+    { cxA: 215, cyA: 225, cxB: 125, cyB: 195, intensityA: 45, intensityB: 32 }, // -60m
+    { cxA: 210, cyA: 218, cxB: 120, cyB: 190, intensityA: 48, intensityB: 34 }, // -45m
+    { cxA: 204, cyA: 211, cxB: 116, cyB: 184, intensityA: 50, intensityB: 36 }, // -30m
+    { cxA: 198, cyA: 204, cxB: 111, cyB: 178, intensityA: 52, intensityB: 38 }, // -15m
+    { cxA: 193, cyA: 197, cxB: 107, cyB: 173, intensityA: 53, intensityB: 38 }, // -5m
+    { cxA: 188, cyA: 190, cxB: 103, cyB: 168, intensityA: 52, intensityB: 38 }, // LIVE
+  ];
 
-    const animate = (currentTime: number) => {
-      const delta = currentTime - lastTime;
-      lastTime = currentTime;
-      setSweepAngle((prev) => (prev + (delta * 0.08)) % 360);
-      animId = requestAnimationFrame(animate);
-    };
+  const currentCell = cellPositions[frameIndex] || cellPositions[5];
 
-    animId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animId);
-  }, []);
-
-  // Frame looping when playing
+  // Automatic Frame looping when playing
   useEffect(() => {
     if (!isPlaying) return;
+    const intervalMs = 1600 / loopSpeed;
     const timer = setInterval(() => {
       setFrameIndex((prev) => (prev + 1) % frames.length);
-    }, 1800);
+    }, intervalMs);
     return () => clearInterval(timer);
-  }, [isPlaying, frames.length]);
+  }, [isPlaying, loopSpeed, frames.length]);
+
+  const handleStepPrev = () => {
+    setIsPlaying(false);
+    setFrameIndex((prev) => (prev === 0 ? frames.length - 1 : prev - 1));
+  };
+
+  const handleStepNext = () => {
+    setIsPlaying(false);
+    setFrameIndex((prev) => (prev + 1) % frames.length);
+  };
 
   return (
     <div className="flex flex-col w-full pb-6">
@@ -52,9 +59,13 @@ export const RadarView: React.FC<RadarViewProps> = ({ station }) => {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-white animate-ping" />
+            <span
+              className={`w-1.5 h-1.5 rounded-none ${
+                isPlaying ? 'bg-white animate-ping' : 'bg-[#8e9193]'
+              }`}
+            />
             <span className="font-code-telemetry text-[11px] text-white font-semibold">
-              SWEEP 4.2 RPM
+              {isPlaying ? `SCANNING // ${loopSpeed}X CADENCE` : 'PAUSED // FRAME HOLD'}
             </span>
           </div>
         </div>
@@ -101,7 +112,11 @@ export const RadarView: React.FC<RadarViewProps> = ({ station }) => {
         {/* Status overlay */}
         <div className="w-full flex items-center justify-between text-[10px] font-code-telemetry text-[#8e9193] mb-1 px-1">
           <span>CENTER: {station.coordinates}</span>
-          <span className="text-white font-semibold">TILT: 0.5° PPI</span>
+          <div className="flex items-center gap-2">
+            <span className="text-white font-semibold">TILT: 0.5° PPI</span>
+            <span className="text-[#8e9193]">|</span>
+            <span className="text-white font-bold">{frames[frameIndex]}</span>
+          </div>
         </div>
 
         {/* Circular Radar Scope */}
@@ -110,8 +125,8 @@ export const RadarView: React.FC<RadarViewProps> = ({ station }) => {
             <defs>
               {/* Radar sweep beam gradient */}
               <linearGradient id="sweep-beam" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.35" />
-                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.1" />
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
+                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.12" />
                 <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
               </linearGradient>
 
@@ -136,7 +151,7 @@ export const RadarView: React.FC<RadarViewProps> = ({ station }) => {
             <line x1="51" y1="51" x2="249" y2="249" stroke="#1f2022" strokeWidth="0.75" />
             <line x1="249" y1="51" x2="51" y2="249" stroke="#1f2022" strokeWidth="0.75" />
 
-            {/* Synthetic Coastline: Bay of Bengal Maritime & Hooghly Estuary */}
+            {/* Simulated Coastline: Bay of Bengal Maritime & Hooghly Estuary */}
             <path
               d="M 20,80 Q 70,85 110,120 T 140,160 T 130,220 T 100,280"
               fill="none"
@@ -148,52 +163,138 @@ export const RadarView: React.FC<RadarViewProps> = ({ station }) => {
               COASTLINE // ESTUARY
             </text>
 
-            {/* Convective Storm Cells (Cluster 1 - Heavy Convective Core) */}
+            {/* Animated CSS Sonar Pulse Waves (Active during loop play) */}
+            {isPlaying && (
+              <>
+                <circle
+                  cx="150"
+                  cy="150"
+                  r="10"
+                  fill="none"
+                  stroke="#ffffff"
+                  className="animate-radar-pulse-1 pointer-events-none"
+                />
+                <circle
+                  cx="150"
+                  cy="150"
+                  r="10"
+                  fill="none"
+                  stroke="#ffffff"
+                  className="animate-radar-pulse-2 pointer-events-none"
+                />
+              </>
+            )}
+
+            {/* Convective Storm Cell 09A (Moves across frames to simulate weather loop) */}
             <g
-              className="cursor-pointer"
+              className="cursor-pointer transition-all duration-300 animate-radar-blip"
               onClick={() => setSelectedCell('CELL-09A')}
             >
-              {/* Outer light rain (20 dBZ) */}
-              <ellipse cx="190" cy="195" rx="36" ry="24" fill="#343537" opacity="0.6" />
-              {/* Moderate core (35 dBZ) */}
-              <ellipse cx="192" cy="193" rx="22" ry="15" fill="#8e9193" opacity="0.7" />
-              {/* Severe Convective Core (50 dBZ) */}
-              <ellipse cx="194" cy="192" rx="12" ry="8" fill="#ffffff" opacity="0.95" />
+              {/* Outer moderate reflectivity */}
+              <ellipse
+                cx={currentCell.cxA}
+                cy={currentCell.cyA}
+                rx="34"
+                ry="22"
+                fill="#343537"
+                opacity="0.65"
+              />
+              {/* Core reflectivity */}
+              <ellipse
+                cx={currentCell.cxA + 2}
+                cy={currentCell.cyA - 1}
+                rx="20"
+                ry="14"
+                fill="#8e9193"
+                opacity="0.75"
+              />
+              {/* Severe Convective Core */}
+              <ellipse
+                cx={currentCell.cxA + 4}
+                cy={currentCell.cyA - 2}
+                rx="11"
+                ry="7"
+                fill="#ffffff"
+                opacity="0.95"
+              />
 
               {/* Storm Vector Arrow pointing NNW */}
-              <line x1="194" y1="192" x2="175" y2="160" stroke="#ffffff" strokeWidth="1.5" />
-              <polygon points="175,160 172,168 180,166" fill="#ffffff" />
-              <text fill="#ffffff" fontFamily="Geist" fontSize="7" fontWeight="600" x="198" y="185">
-                CELL-09A [52 dBZ]
+              <line
+                x1={currentCell.cxA + 4}
+                y1={currentCell.cyA - 2}
+                x2={currentCell.cxA - 16}
+                y2={currentCell.cyA - 30}
+                stroke="#ffffff"
+                strokeWidth="1.5"
+              />
+              <polygon
+                points={`${currentCell.cxA - 16},${currentCell.cyA - 30} ${currentCell.cxA - 19},${currentCell.cyA - 22} ${currentCell.cxA - 11},${currentCell.cyA - 24}`}
+                fill="#ffffff"
+              />
+              <text
+                fill="#ffffff"
+                fontFamily="Geist"
+                fontSize="7"
+                fontWeight="600"
+                x={currentCell.cxA + 8}
+                y={currentCell.cyA - 7}
+              >
+                CELL-09A [{currentCell.intensityA} dBZ]
               </text>
             </g>
 
-            {/* Secondary Scatter Cell */}
+            {/* Secondary Cell 09B */}
             <g
-              className="cursor-pointer"
+              className="cursor-pointer transition-all duration-300"
               onClick={() => setSelectedCell('CELL-09B')}
             >
-              <ellipse cx="105" cy="170" rx="18" ry="14" fill="#444749" opacity="0.6" />
-              <ellipse cx="104" cy="169" rx="8" ry="6" fill="#c4c7c9" opacity="0.8" />
-              <text fill="#c4c7c9" fontFamily="Geist" fontSize="6" x="80" y="190">
-                CELL-09B [38 dBZ]
+              <ellipse
+                cx={currentCell.cxB}
+                cy={currentCell.cyB}
+                rx="16"
+                ry="12"
+                fill="#444749"
+                opacity="0.6"
+              />
+              <ellipse
+                cx={currentCell.cxB - 1}
+                cy={currentCell.cyB - 1}
+                rx="7"
+                ry="5"
+                fill="#c4c7c9"
+                opacity="0.8"
+              />
+              <text
+                fill="#c4c7c9"
+                fontFamily="Geist"
+                fontSize="6"
+                x={currentCell.cxB - 22}
+                y={currentCell.cyB + 18}
+              >
+                CELL-09B [{currentCell.intensityB} dBZ]
               </text>
             </g>
 
-            {/* Rotating Radar Sweep Arm */}
-            <g transform={`rotate(${sweepAngle} 150 150)`}>
+            {/* CSS-Animated Radar Sweep Beam */}
+            <g
+              className="animate-radar-sweep"
+              style={{
+                animationPlayState: isPlaying ? 'running' : 'paused',
+                animationDuration: `${4 / loopSpeed}s`,
+              }}
+            >
               {/* Sweep Wedge */}
               <path
-                d="M 150,150 L 150,10 A 140,140 0 0,0 90,26 Z"
+                d="M 150,150 L 150,10 A 140,140 0 0,0 85,28 Z"
                 fill="url(#sweep-beam)"
               />
               {/* Leading beam line */}
-              <line x1="150" y1="150" x2="150" y2="10" stroke="#ffffff" strokeWidth="1.5" />
+              <line x1="150" y1="150" x2="150" y2="10" stroke="#ffffff" strokeWidth="1.75" />
             </g>
 
             {/* Center Station Transmitter Node */}
-            <circle cx="150" cy="150" r="3" fill="#ffffff" />
-            <circle cx="150" cy="150" r="6" fill="none" stroke="#ffffff" strokeWidth="0.8" />
+            <circle cx="150" cy="150" r="3.5" fill="#ffffff" />
+            <circle cx="150" cy="150" r="7" fill="none" stroke="#ffffff" strokeWidth="0.8" />
 
             {/* Cardinal Marks */}
             <text fill="#ffffff" fontFamily="Geist" fontSize="8" fontWeight="600" textAnchor="middle" x="150" y="22">
@@ -232,30 +333,63 @@ export const RadarView: React.FC<RadarViewProps> = ({ station }) => {
           )}
         </div>
 
-        {/* Playback & Timeline Controls */}
-        <div className="w-full mt-2 p-2 bg-[#1b1c1e] border border-[#2b3038]/40 flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+        {/* Playback & Timeline Controls with prominent Play Button */}
+        <div className="w-full mt-2 p-2 bg-[#1b1c1e] border border-[#2b3038]/40 flex flex-col gap-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            {/* Play/Pause & Step Controls */}
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setIsPlaying(!isPlaying)}
-                className="w-7 h-7 flex items-center justify-center bg-white text-black font-bold hover:bg-[#e0e3e5] cursor-pointer"
-                title={isPlaying ? 'Pause radar loop' : 'Play radar loop'}
+                className={`px-3 py-1 flex items-center gap-1 font-geist text-[10px] uppercase font-bold tracking-wider transition-all cursor-pointer ${
+                  isPlaying
+                    ? 'bg-white text-black shadow-lg hover:bg-[#e0e3e5]'
+                    : 'bg-[#292a2c] text-white border border-[#444749] hover:bg-[#343537]'
+                }`}
+                title={isPlaying ? 'Pause radar scan' : 'Start radar scan loop'}
               >
                 <span className="material-symbols-outlined text-[16px]">
                   {isPlaying ? 'pause' : 'play_arrow'}
                 </span>
+                <span>{isPlaying ? 'PAUSE SCAN' : 'PLAY LOOP'}</span>
               </button>
-              <span className="font-geist text-[10px] uppercase font-semibold text-white tracking-wider">
-                RADAR LOOP ({frames[frameIndex]})
-              </span>
+
+              {/* Frame Step Buttons */}
+              <button
+                onClick={handleStepPrev}
+                className="w-7 h-7 flex items-center justify-center bg-[#0d0e10] border border-[#2b3038] text-[#c4c7c9] hover:text-white hover:border-white cursor-pointer"
+                title="Step backward one frame"
+              >
+                <span className="material-symbols-outlined text-[14px]">skip_previous</span>
+              </button>
+              <button
+                onClick={handleStepNext}
+                className="w-7 h-7 flex items-center justify-center bg-[#0d0e10] border border-[#2b3038] text-[#c4c7c9] hover:text-white hover:border-white cursor-pointer"
+                title="Step forward one frame"
+              >
+                <span className="material-symbols-outlined text-[14px]">skip_next</span>
+              </button>
             </div>
 
-            <span className="font-code-telemetry text-[10px] text-[#8e9193]">
-              15-MIN COMPOSITE SCAN
-            </span>
+            {/* Loop Playback Speed Selector */}
+            <div className="flex items-center gap-1">
+              <span className="font-geist text-[9px] uppercase text-[#8e9193]">SPEED:</span>
+              <div className="flex bg-[#0d0e10] p-0.5 border border-[#2b3038] gap-0.5 font-code-telemetry text-[9px]">
+                {([1, 2, 4] as const).map((spd) => (
+                  <button
+                    key={spd}
+                    onClick={() => setLoopSpeed(spd)}
+                    className={`px-1.5 py-0.5 transition-colors cursor-pointer ${
+                      loopSpeed === spd ? 'bg-white text-black font-bold' : 'text-[#8e9193] hover:text-white'
+                    }`}
+                  >
+                    {spd}X
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Stepper bar */}
+          {/* Stepper bar across 6 frames */}
           <div className="grid grid-cols-6 gap-1">
             {frames.map((f, i) => (
               <button
@@ -264,9 +398,9 @@ export const RadarView: React.FC<RadarViewProps> = ({ station }) => {
                   setFrameIndex(i);
                   setIsPlaying(false);
                 }}
-                className={`py-1 text-center font-code-telemetry text-[9px] border transition-colors cursor-pointer ${
+                className={`py-1 text-center font-code-telemetry text-[9px] border transition-all cursor-pointer ${
                   frameIndex === i
-                    ? 'bg-white text-black font-bold border-white'
+                    ? 'bg-white text-black font-bold border-white shadow-sm'
                     : 'bg-[#0d0e10] text-[#8e9193] border-[#2b3038] hover:text-white'
                 }`}
               >
@@ -276,7 +410,7 @@ export const RadarView: React.FC<RadarViewProps> = ({ station }) => {
           </div>
 
           {/* Reflectivity Grayscale Color Scale */}
-          <div className="mt-1 pt-1.5 border-t border-[#2b3038]/40 flex flex-col gap-1">
+          <div className="pt-1 border-t border-[#2b3038]/40 flex flex-col gap-1">
             <div className="flex justify-between text-[8px] font-code-telemetry text-[#8e9193]">
               <span>5 dBZ (MIST)</span>
               <span>25 dBZ (SHOWERS)</span>

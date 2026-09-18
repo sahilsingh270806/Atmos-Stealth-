@@ -57,3 +57,59 @@
   scrollbar-width: none;
 }
 
+/* Tactical Radar CSS Animations */
+@keyframes radar-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes radar-pulse-ring {
+  0% {
+    r: 10px;
+    opacity: 0.9;
+    stroke-width: 1.5px;
+  }
+  70% {
+    opacity: 0.2;
+    stroke-width: 0.75px;
+  }
+  100% {
+    r: 140px;
+    opacity: 0;
+    stroke-width: 0.5px;
+  }
+}
+
+@keyframes radar-cell-glow {
+  0%, 100% {
+    opacity: 0.75;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+.animate-radar-sweep {
+  transform-origin: 150px 150px;
+  animation: radar-sweep 4s linear infinite;
+}
+
+.animate-radar-pulse-1 {
+  animation: radar-pulse-ring 3s cubic-bezier(0.1, 0.2, 0.8, 1) infinite;
+}
+
+.animate-radar-pulse-2 {
+  animation: radar-pulse-ring 3s cubic-bezier(0.1, 0.2, 0.8, 1) 1.5s infinite;
+}
+
+.animate-radar-blip {
+  animation: radar-cell-glow 2s ease-in-out infinite;
+}
+
+
