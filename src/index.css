@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-geist: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+    --font-hanken: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  body {
+    font-family: var(--font-hanken);
+    background-color: #121315;
+    color: #e3e2e5;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+}
+
+.font-geist {
+  font-family: 'Geist', monospace, sans-serif;
+}
+
+.font-hanken {
+  font-family: 'Hanken Grotesk', sans-serif;
+}
+
+.font-code-telemetry {
+  font-family: 'Geist', monospace;
+  letter-spacing: 0.02em;
+}
+
+/* Material symbol baseline */
+.material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+  vertical-align: middle;
+}
+
+.material-symbols-fill {
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+  vertical-align: middle;
+}
+
+/* Zero scrollbars for clean stealth look */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
