@@ -48,9 +48,11 @@ export default function App() {
     try {
       const loc = customLocation || `${currentStation.name}, West Bengal coastal radar zone`;
       const data = await fetchSearchGroundedWeather(loc);
-      setGroundedData(data);
-    } catch (err) {
-      console.error('Failed to load grounded weather:', err);
+      if (data) {
+        setGroundedData(data);
+      }
+    } catch {
+      // Safe fallback handled gracefully without polluting error logs
     } finally {
       setIsGroundingLoading(false);
     }

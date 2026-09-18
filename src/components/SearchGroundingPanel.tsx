@@ -132,6 +132,11 @@ export const SearchGroundingPanel: React.FC<SearchGroundingPanelProps> = ({
               <p className="font-hanken text-[12px] text-[#e3e2e5] leading-relaxed whitespace-pre-line">
                 {groundedData.summary}
               </p>
+              {groundedData.notice && (
+                <div className="mt-1.5 pt-1 border-t border-[#2b3038]/40 font-code-telemetry text-[9px] text-[#8e9193]">
+                  STATUS NOTE: {groundedData.notice}
+                </div>
+              )}
             </div>
           )}
 
